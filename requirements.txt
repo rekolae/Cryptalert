@@ -1,0 +1,2 @@
+requests==2.25.1
+windows-curses==2.2.0; platform_system == "Windows"
