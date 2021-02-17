@@ -5,7 +5,7 @@ Handles reading all possible configurations from files and commandline and setti
 from pathlib import Path
 from argparse import ArgumentParser
 from configparser import ConfigParser
-from typing import Dict
+from typing import List
 
 
 class Config:
@@ -15,19 +15,33 @@ class Config:
 
     def __init__(self):
         # Assume that the default config file is located in the root directory
-        self.config_file = Path(__file__).parent.parent / "config.ini"
-        self.config: Dict = {}
-        self._config_parser = ConfigParser()
+        self._config_file: Path = Path(__file__).parent.parent / "config.ini"
+        self._verbosity: str = ""
+
+        self._config_parser = ConfigParser(allow_no_value=True)
         self._arg_parser = ArgumentParser(
-            description="Watch cryptocurrency movements and alert the user based on them",
-            prog="cryptalert"
+            prog="cryptalert",
+            description="Watch cryptocurrency movements and alert the user based on them"
         )
 
         self._add_arguments()
 
     def _add_arguments(self) -> None:
-        self._arg_parser.add_argument("-c", "--config", help="Config file path", type=Path)
-        self._arg_parser.add_argument("-v", "--verbosity", action="count", default=0)
+        self._arg_parser.add_argument(
+            "-c",
+            "--config",
+            help="Config file path",
+            type=Path
+        )
+
+        self._arg_parser.add_argument(
+            "-v",
+            "--verbosity",
+            help="Application verbosity",
+            choices=["ERROR, INFO, DEBUG"],
+            default="INFO",
+            type=str
+        )
 
     def parse(self) -> bool:
         """
@@ -37,18 +51,14 @@ class Config:
         :return: True if configuration parsing was succesful, False if not
         """
 
+        # Parse commandline args first
         self._parse_args()
+        self._config_logging()
 
-        if not self.config_file.exists():
+        if not self._config_file.exists() or not self._parse_config_file():
             return False
 
-        self._parse_config_file()
-
-        if self._check_config():
-            return True
-
-        else:
-            return False
+        return True
 
     def _parse_args(self) -> None:
         """
@@ -56,25 +66,42 @@ class Config:
         :return: True if configuration parsing was succesful, False if not
         """
 
-        pass
+        args = self._arg_parser.parse_args()
 
-    def _parse_config_file(self):
+        # Override default config file location
+        if args.config is not None:
+            self.config_file = args.config
+
+        self._verbosity = args.verbosity
+
+    def _parse_config_file(self) -> bool:
         """
-        Parse configuration file and save the data to a class variable
+        Parse configuration file and check validity
         """
 
-        pass
+        self._config_parser.read(self._config_file)
+        return self._check_config()
 
     def _check_config(self) -> bool:
         """
-        Check if mandatory
+        Check if mandatory sections are present
 
         :return: True if configuration is ok, False if not
         """
 
-        pass
+        # Chech that needed sections are present
+        for section in ["CURRENCIES", "API REQUEST"]:
+            if section not in self._config_parser.sections():
+                return False
 
-    def get_config(self):
+        # Check for unknow currencies
+        for curr in self._config_parser["CURRENCIES"]:
+            if curr not in ["btc", "eth", "ltc", "xrp", "xlm"]:
+                return False
+
+        return True
+
+    def get_section(self):
         """
         Return the parsed configuration
 
@@ -83,7 +110,7 @@ class Config:
 
         pass
 
-    def config_logging(self):
+    def _config_logging(self):
         """
         Configure application logging
         """
