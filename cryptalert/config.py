@@ -1,11 +1,16 @@
 """
 Handles reading all possible configurations from files and commandline and setting up logging
+
+Emil Rekola <emil.rekola@hotmail.com>, 2021
 """
 
+# STD imports
+import logging
 from pathlib import Path
-from argparse import ArgumentParser
-from configparser import ConfigParser
 from typing import List
+
+# 3rd-party imports
+from configargparse import ArgParser, ArgumentDefaultsRawHelpFormatter, Namespace
 
 
 class Config:
@@ -14,14 +19,16 @@ class Config:
     """
 
     def __init__(self):
-        # Assume that the default config file is located in the root directory
         self._config_file: Path = Path(__file__).parent.parent / "config.ini"
         self._verbosity: str = ""
+        self._config: Namespace = Namespace()
+        self._supported_currencies: List = ["btc", "eth", "ltc", "xrp", "xlm"]
 
-        self._config_parser = ConfigParser(allow_no_value=True)
-        self._arg_parser = ArgumentParser(
+        self._arg_parser = ArgParser(
             prog="cryptalert",
-            description="Watch cryptocurrency movements and alert the user based on them"
+            description="Watch cryptocurrency movements and alert the user based on them.",
+            formatter_class=ArgumentDefaultsRawHelpFormatter,
+            default_config_files=[str(self._config_file)]
         )
 
         self._add_arguments()
@@ -31,7 +38,8 @@ class Config:
             "-c",
             "--config",
             help="Config file path",
-            type=Path
+            type=Path,
+            is_config_file=True
         )
 
         self._arg_parser.add_argument(
@@ -40,10 +48,27 @@ class Config:
             help="Application verbosity",
             choices=["ERROR, INFO, DEBUG"],
             default="INFO",
-            type=str
+            type=str.upper
         )
 
-    def parse(self) -> bool:
+        self._arg_parser.add_argument(
+            "--currencies",
+            help="List of watched currencies",
+            choices=self._supported_currencies,
+            nargs='+',
+            default=self._supported_currencies,
+            type=str.lower
+        )
+
+        self._arg_parser.add_argument(
+            "-p",
+            "--ping-interval",
+            help="How often to ping for data",
+            default=10,
+            type=int
+        )
+
+    def parse_args(self) -> None:
         """
         Try to parse the config file either by using the default location or checking if the config file was specified
         in the commandline args
@@ -52,67 +77,28 @@ class Config:
         """
 
         # Parse commandline args first
-        self._parse_args()
+        self._config = self._arg_parser.parse_args()
         self._config_logging()
 
-        if not self._config_file.exists() or not self._parse_config_file():
-            return False
-
-        return True
-
-    def _parse_args(self) -> None:
+    def get_args(self) -> Namespace:
         """
-        Parse commandline args and extend the config file
-        :return: True if configuration parsing was succesful, False if not
+        Return the parsed args
+
+        :return: Namespace holding all args and corresponding values
         """
 
-        args = self._arg_parser.parse_args()
-
-        # Override default config file location
-        if args.config is not None:
-            self.config_file = args.config
-
-        self._verbosity = args.verbosity
-
-    def _parse_config_file(self) -> bool:
-        """
-        Parse configuration file and check validity
-        """
-
-        self._config_parser.read(self._config_file)
-        return self._check_config()
-
-    def _check_config(self) -> bool:
-        """
-        Check if mandatory sections are present
-
-        :return: True if configuration is ok, False if not
-        """
-
-        # Chech that needed sections are present
-        for section in ["CURRENCIES", "API REQUEST"]:
-            if section not in self._config_parser.sections():
-                return False
-
-        # Check for unknow currencies
-        for curr in self._config_parser["CURRENCIES"]:
-            if curr not in ["btc", "eth", "ltc", "xrp", "xlm"]:
-                return False
-
-        return True
-
-    def get_section(self):
-        """
-        Return the parsed configuration
-
-        :return: Dict holding parsed configurations
-        """
-
-        pass
+        return self._config
 
     def _config_logging(self):
         """
-        Configure application logging
+        Setups logging with default/given verbosity
         """
 
-        pass
+        # Set logging verbosity based on user configuration
+        logging_level = getattr(logging, self._config.verbosity)
+
+        # Configure logger
+        logging.basicConfig(level=logging_level)
+
+        logging.info("Logging has been set to %s", self._config.verbosity)
+        logging.debug(self._arg_parser.format_values())
