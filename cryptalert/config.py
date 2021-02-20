@@ -68,6 +68,21 @@ class Config:
             type=int
         )
 
+        self._arg_parser.add_argument(
+            "-e",
+            "--enable-bot",
+            help="Enable discord bot",
+            action="store_true"
+        )
+
+        self._arg_parser.add_argument(
+            "-t",
+            "--bot-token",
+            help="Discord bot token, must be present if -e/--enable-bot is used",
+            type=str,
+            env_var="CRYPTALERT_DISCORD_TOKEN"
+        )
+
     def parse_args(self) -> None:
         """
         Try to parse the config file either by using the default location or checking if the config file was specified
