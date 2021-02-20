@@ -130,3 +130,8 @@ dmypy.json
 
 # PyCharm stuff:
 .idea
+
+# Linter and coverage configs
+.coveragerc
+.pylintrc
+.flake8
