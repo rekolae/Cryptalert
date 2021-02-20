@@ -68,6 +68,13 @@ class Config:
             type=int
         )
 
+        self._arg_parser.add_argument(
+            "-a",
+            "--api-address",
+            help="Address of the coinmotion API for fetching rates",
+            type=str
+        )
+
     def parse_args(self) -> None:
         """
         Try to parse the config file either by using the default location or checking if the config file was specified
