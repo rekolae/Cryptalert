@@ -46,7 +46,7 @@ class Config:
             "-v",
             "--verbosity",
             help="Application verbosity",
-            choices=["ERROR, INFO, DEBUG"],
+            choices=["ERROR", "INFO", "DEBUG"],
             default="INFO",
             type=str.upper
         )
