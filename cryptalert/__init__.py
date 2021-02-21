@@ -1,5 +1,5 @@
 """
-Main entry point for the application
+Init main module
 
 Emil Rekola <emil.rekola@hotmail.com>, 2021
 """
