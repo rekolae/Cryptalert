@@ -131,6 +131,9 @@ dmypy.json
 # PyCharm stuff:
 .idea
 
+# VS Code stuff:
+.vscode
+
 # Linter and coverage configs
 .coveragerc
 .pylintrc
