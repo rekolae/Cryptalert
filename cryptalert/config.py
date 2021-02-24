@@ -34,6 +34,10 @@ class Config:
         self._add_arguments()
 
     def _add_arguments(self) -> None:
+        """
+        Define args that are acknowledged by the application
+        """
+
         self._arg_parser.add_argument(
             "-c",
             "--config",
@@ -70,7 +74,7 @@ class Config:
 
         self._arg_parser.add_argument(
             "-e",
-            "--enable-bot",
+            "--enable-discord-bot",
             help="Enable discord bot",
             action="store_true"
         )
@@ -80,29 +84,50 @@ class Config:
             "--bot-token",
             help="Discord bot token, must be present if -e/--enable-bot is used",
             type=str,
-            env_var="CRYPTALERT_DISCORD_TOKEN"
+            env_var="CRYPTALERT_DISCORD_TOKEN",
+            required=False
+        )
+
+        self._arg_parser.add_argument(
+            "-i",
+            "--info-channel-id",
+            help="Main channel ID, used for notifications when bot comes online or going offline",
+            type=int,
+            env_var="CRYPTALERT_DISCORD_MAIN_CHANNEL_ID",
+            required=False,
         )
 
     def parse_args(self) -> None:
         """
         Try to parse the config file either by using the default location or checking if the config file was specified
-        in the commandline args
+        in the commandline args, also read env vars
 
         :return: True if configuration parsing was succesful, False if not
         """
 
-        # Parse commandline args first
+        # Parse args first and then configure logging
         self._config = self._arg_parser.parse_args()
         self._config_logging()
 
     def get_args(self) -> Namespace:
         """
-        Return the parsed args
+        Return the previously parsed args
 
         :return: Namespace holding all args and corresponding values
         """
 
         return self._config
+
+    def get_arg(self, arg: str):
+        """
+        Return a single arg matching the given arg
+
+        :param arg: Name of the arg
+        :return: Value corresponding to the arg
+        :rtype: Any
+        """
+
+        return getattr(self._config, arg)
 
     def _config_logging(self):
         """
