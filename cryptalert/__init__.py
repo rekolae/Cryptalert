@@ -13,6 +13,3 @@ from cryptalert.config import Config
 
 # Get application name from the project folder name
 prog_name = Path(__file__).parent.parent.name
-
-# Initialize application config class
-config = Config()
