@@ -21,7 +21,6 @@ class Config:
     def __init__(self):
         self._config_file: Path = Path(__file__).parent.parent / "config.ini"
         self._verbosity: str = ""
-        self._config: Namespace = Namespace()
         self._supported_currencies: List = ["btc", "eth", "ltc", "xrp", "xlm"]
 
         self._arg_parser = ArgParser(
@@ -33,7 +32,15 @@ class Config:
 
         self._add_arguments()
 
+        # Parse args from config file, commandline and env vars
+        self._config: Namespace = self._arg_parser.parse_args()
+        self._config_logging()
+
     def _add_arguments(self) -> None:
+        """
+        Define args that are acknowledged by the application
+        """
+
         self._arg_parser.add_argument(
             "-c",
             "--config",
@@ -75,26 +82,50 @@ class Config:
             type=str
         )
 
-    def parse_args(self) -> None:
-        """
-        Try to parse the config file either by using the default location or checking if the config file was specified
-        in the commandline args
+        self._arg_parser.add_argument(
+            "-e",
+            "--enable-discord-bot",
+            help="Enable discord bot",
+            action="store_true"
+        )
 
-        :return: True if configuration parsing was succesful, False if not
-        """
+        self._arg_parser.add_argument(
+            "-t",
+            "--bot-token",
+            help="Discord bot token, must be present if -e/--enable-bot is used",
+            type=str,
+            env_var="CRYPTALERT_DISCORD_TOKEN",
+            required=False
+        )
 
-        # Parse commandline args first
-        self._config = self._arg_parser.parse_args()
-        self._config_logging()
+        self._arg_parser.add_argument(
+            "-i",
+            "--info-channel-id",
+            help="Main channel ID, used for notifications when bot comes online or going offline",
+            type=int,
+            env_var="CRYPTALERT_DISCORD_MAIN_CHANNEL_ID",
+            required=False,
+        )
 
     def get_args(self) -> Namespace:
         """
-        Return the parsed args
+        Return the previously parsed args
 
         :return: Namespace holding all args and corresponding values
         """
 
         return self._config
+
+    def get_arg(self, arg: str):
+        """
+        Return a single arg matching the given arg
+
+        :param arg: Name of the arg
+        :return: Value corresponding to the arg
+        :rtype: Any
+        """
+
+        return getattr(self._config, arg)
 
     def _config_logging(self):
         """
@@ -109,3 +140,6 @@ class Config:
 
         logging.info("Logging has been set to %s", self._config.verbosity)
         logging.debug(self._arg_parser.format_values())
+
+
+config = Config()
