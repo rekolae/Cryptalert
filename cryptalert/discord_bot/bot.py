@@ -43,15 +43,12 @@ class DiscordBot(discord.Client):
         """
 
         # Ignore bot's own messages
-        if message.author == self.user:
-            return
-
-        else:
+        if message.author != self.user:
             logging.info("Message from %s at %s: %s", message.author, message.channel, message.content)
 
-        # Play some Ping Pong with another user
-        if message.content.lower() == "ping":
-            await self.send_message(message.channel, "Pong")
+            # Play some Ping Pong with another user
+            if message.content.lower() == "ping":
+                await self.send_message(message.channel, "Pong")
 
     async def send_message(self, channel, message):
         """

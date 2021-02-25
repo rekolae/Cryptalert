@@ -76,6 +76,13 @@ class Config:
         )
 
         self._arg_parser.add_argument(
+            "-a",
+            "--api-address",
+            help="Address of the coinmotion API for fetching rates",
+            type=str
+        )
+
+        self._arg_parser.add_argument(
             "-e",
             "--enable-discord-bot",
             help="Enable discord bot",

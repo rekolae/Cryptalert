@@ -1,11 +1,14 @@
 """
-Main entry point for the application
+Init main module
 
 Emil Rekola <emil.rekola@hotmail.com>, 2021
 """
 
 # STD imports
 from pathlib import Path
+
+# Local imports
+from cryptalert.config import Config
 
 
 # Get application name from the project folder name
