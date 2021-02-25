@@ -4,6 +4,7 @@ Main entry point for the application
 Emil Rekola <emil.rekola@hotmail.com>, 2021
 """
 
+# STD imports
 from pathlib import Path
 
 

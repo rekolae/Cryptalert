@@ -21,7 +21,6 @@ class Config:
     def __init__(self):
         self._config_file: Path = Path(__file__).parent.parent / "config.ini"
         self._verbosity: str = ""
-        self._config: Namespace = Namespace()
         self._supported_currencies: List = ["btc", "eth", "ltc", "xrp", "xlm"]
 
         self._arg_parser = ArgParser(
@@ -32,6 +31,10 @@ class Config:
         )
 
         self._add_arguments()
+
+        # Parse args from config file, commandline and env vars
+        self._config: Namespace = self._arg_parser.parse_args()
+        self._config_logging()
 
     def _add_arguments(self) -> None:
         """
@@ -97,18 +100,6 @@ class Config:
             required=False,
         )
 
-    def parse_args(self) -> None:
-        """
-        Try to parse the config file either by using the default location or checking if the config file was specified
-        in the commandline args, also read env vars
-
-        :return: True if configuration parsing was succesful, False if not
-        """
-
-        # Parse args first and then configure logging
-        self._config = self._arg_parser.parse_args()
-        self._config_logging()
-
     def get_args(self) -> Namespace:
         """
         Return the previously parsed args
@@ -142,3 +133,6 @@ class Config:
 
         logging.info("Logging has been set to %s", self._config.verbosity)
         logging.debug(self._arg_parser.format_values())
+
+
+config = Config()
