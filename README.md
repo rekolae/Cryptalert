@@ -1,8 +1,9 @@
 # Cryptalert
 
-Provide alerts based on cryptocurrency movements
+Python application that fetches cryptocurrency data and notifies the user through discord. The application operation is
+configurable: TUI (Text UI) and discord bot can both be enabled at the same time, or one of the two can be turned off.
 
-Everyone is welcome to take part in the project, but please read through the following
+Everyone is welcome to take part in the project, but please read through the rest of the README
 
 # Commit messages and format
 
