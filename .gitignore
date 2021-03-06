@@ -138,3 +138,6 @@ dmypy.json
 .coveragerc
 .pylintrc
 .flake8
+
+# macOS directory cache
+.DS_Store
