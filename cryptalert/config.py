@@ -83,14 +83,14 @@ class Config:
         )
 
         self._arg_parser.add_argument(
-            "-e",
+            "-d",
             "--enable-discord-bot",
-            help="Enable discord bot",
+            help="Enable discord bot for notifications",
             action="store_true"
         )
 
         self._arg_parser.add_argument(
-            "-t",
+            "-b",
             "--bot-token",
             help="Discord bot token, must be present if -e/--enable-bot is used",
             type=str,
@@ -105,6 +105,13 @@ class Config:
             type=int,
             env_var="CRYPTALERT_DISCORD_MAIN_CHANNEL_ID",
             required=False,
+        )
+
+        self._arg_parser.add_argument(
+            "-t",
+            "--enable-tui",
+            help="Enable the text ui",
+            action="store_true"
         )
 
     def get_args(self) -> Namespace:
@@ -142,4 +149,3 @@ class Config:
         logging.debug(self._arg_parser.format_values())
 
 
-config = Config()
