@@ -1,7 +1,7 @@
 """
 Definitions for different custom exceptions
 
-Emil Rekola <emil.rekola@hotmail.com>, 2021
+Emil Rekola <emil.rekola@hotmail.com>
 """
 
 
@@ -13,7 +13,7 @@ class DataLengthException(Exception):
 
 class ApiAddressException(Exception):
     """
-    Custom exception when API address is none
+    Custom exception when API address is none or the given address was invalid
     """
 
 
