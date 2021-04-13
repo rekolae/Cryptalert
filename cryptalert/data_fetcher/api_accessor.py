@@ -73,8 +73,8 @@ class ApiAccessor:
             parsed_data[currency_data["currencyCode"]] = {
                 "sell": currency_data["buy"],
                 "buy": currency_data["sell"],
-                "fchangep": currency_data["fchangep"],
-                "fhigh": currency_data["fhigh"]
+                "changePercent": currency_data["fchangep"],
+                "high": currency_data["fhigh"]
             }
 
         # Total market trend

@@ -7,7 +7,9 @@ Emil Rekola <emil.rekola@hotmail.com>
 # STD imports
 import logging
 import json
+import datetime
 from typing import Dict
+from asyncio import sleep
 
 # 3rd-party imports
 import discord
@@ -42,6 +44,9 @@ class DiscordBot(discord.Client):
         if self._main_channel_id is not None:
             self._logger.debug("Sending bot login message")
             await self.send_message(self.get_channel(self._main_channel_id), f"{self.bot_name} is online!")
+
+        # Add task that runs in the background every 10min
+        self.loop.create_task(self.periodic_update())
 
     async def on_message(self, message):
         """
@@ -100,3 +105,41 @@ class DiscordBot(discord.Client):
             msg = f"Current market is dropping!\nCurrent change is -{status['changePercent']}%!"
 
         return msg
+
+    async def periodic_update(self):
+        """
+        Run task every 10min during daytime (7-23) that gives updates on the crypto currencies
+        """
+
+        while True:
+
+            # Get current time
+            now = datetime.datetime.now()
+
+            # If time is between 23-07 -> mute periodic updates
+            if 7 <= now.hour <= 23:
+                embed_msg = discord.Embed(
+                    title="Status update!",
+                    description=self.get_market(),
+                    color=discord.Color.magenta()
+                )
+
+                for currency in self.api_accessor.api_data:
+                    if currency != "market":
+                        for op in ("buy", "sell", "changePercent"):
+                            embed_msg.add_field(
+                                name=f"{currency} {op}",
+                                value=self.api_accessor.api_data[currency][op],
+                                inline=True
+                            )
+
+                await self.get_channel(self._main_channel_id).send(embed=embed_msg)
+
+                # Sleep for 10min
+                await sleep(600)
+
+            # Sleep longer when it is quiet times
+            else:
+
+                # Sleep for 1 hour
+                await sleep(3600)
