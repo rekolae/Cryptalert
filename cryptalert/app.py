@@ -148,3 +148,9 @@ class Application:
                     raise UnsupportedOperationModeException("Discord bot token not given and TUI not enabled")
 
                 self._logger.error("Discord bot token is None, bot will not be enabled")
+
+
+# Start application if file is run as main
+if __name__ == '__main__':
+    app = Application()
+    app.run()
