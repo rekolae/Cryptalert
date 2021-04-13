@@ -1,20 +1,21 @@
 """
 Handles fetching cryptocurrency data from the coinmotion API
 
-Emil Rekola <emil.rekola@hotmail.com>, 2021
+Emil Rekola <emil.rekola@hotmail.com>
 """
 
 # STD imports
+import json
 import logging
 from time import sleep
 from typing import List, Dict
-from multiprocessing import Event
+from threading import Event
 
 # 3rd-party imports
 from requests import get
 
 # Local imports
-from cryptalert.config import config
+from cryptalert.exceptions import ApiAddressException
 
 
 class ApiAccessor:
@@ -22,22 +23,33 @@ class ApiAccessor:
     Class for handling data fetching for the application
     """
 
-    def __init__(self, stop_flag):
-        args = config.get_args()
-
+    def __init__(self, args, stop_flag):
+        self.api_data: Dict = {}
+        self.data_ready: Event = Event()
         self.api_address: str = args.api_address
         self.ping_interval: int = args.ping_interval
         self.currency_keys: List = [f"{currency}eur" for currency in args.currencies]
         self._stop_flag: Event = stop_flag
+        self._logger = logging.getLogger("ApiAccessor")
 
-    def fetch_data(self) -> Dict:
+    def fetch_data(self) -> None:
         """
         Fetch data by making a GET request to the coinmotion API
         """
 
+        self._logger.debug("Fetching data")
         response = get(self.api_address)
-        data = self._parse_json(response.json())
-        return data
+
+        # Try to fetch data
+        try:
+            res = response.json()
+
+        except json.JSONDecodeError as json_error:
+            self._logger.critical("No suitable response from API address '%s'", self.api_address)
+            raise ApiAddressException(f"No suitable response from API address '{self.api_address}'") from json_error
+
+        else:
+            self.api_data = self._parse_json(res)
 
     def _parse_json(self, response: Dict) -> Dict:
         """
@@ -45,7 +57,6 @@ class ApiAccessor:
 
         :param response: Dict holding the response
         :return: Parsed data from the response
-        :rtype: Dict
         """
 
         if not response["success"]:
@@ -58,13 +69,19 @@ class ApiAccessor:
         for currency in filtered_currencies:
             currency_data = response["payload"][currency]
 
+            # Buy/Sell must be inverted to get the prespective of the user
             parsed_data[currency_data["currencyCode"]] = {
-                "buy": currency_data["buy"],
-                "sell": currency_data["sell"],
-                "changeAmount": currency_data["changeAmount"],
+                "sell": currency_data["buy"],
+                "buy": currency_data["sell"],
                 "fchangep": currency_data["fchangep"],
                 "fhigh": currency_data["fhigh"]
             }
+
+        # Total market trend
+        parsed_data["market"] = {
+            "changePercent": response["payload"]["market"]["changeAmount"],
+            "sign": response["payload"]["market"]["changeSign"]
+        }
 
         return parsed_data
 
@@ -74,7 +91,6 @@ class ApiAccessor:
 
         :param keys: List of the keys that are to filtered
         :return: Filtered keys
-        :rtype: List
         """
 
         filtered_keys = []
@@ -86,22 +102,29 @@ class ApiAccessor:
 
         return filtered_keys
 
-    def sleep(self) -> None:
+    def _sleep(self) -> None:
         """
         Sleep for configured amount of time before fetching data from the API again
         """
 
-        sleep(self.ping_interval)
+        # Try to skip the sleeping period if the flag was set during data fetch
+        if not self._stop_flag.is_set():
+            sleep(self.ping_interval)
 
-    def run(self) -> None:
+    def start(self) -> None:
         """
         Loop indefinitely fetching data and sleeping until stop flag is set
         """
 
-        logging.info("Starting data fetching loop")
+        self._logger.info("Starting data fetching loop")
 
+        # Set flag after first batch of data is ready
+        self.fetch_data()
+        self.data_ready.set()
+
+        # Fetch data and sleep
         while not self._stop_flag.is_set():
-            print(self.fetch_data())
-            self.sleep()
+            self.fetch_data()
+            self._sleep()
 
-        logging.info("Data fetching loop stopped")
+        self._logger.info("Data fetching loop stopped")
