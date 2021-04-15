@@ -45,8 +45,8 @@ class DiscordBot(discord.Client):
             self._logger.debug("Sending bot login message")
             await self.send_message(self.get_channel(self._main_channel_id), f"{self.bot_name} is online!")
 
-        # Add task that runs in the background every 10min
-        self.loop.create_task(self.periodic_update())
+            # Add task that runs in the background every 10min
+            self.loop.create_task(self.periodic_update())
 
     async def on_message(self, message):
         """
@@ -117,7 +117,7 @@ class DiscordBot(discord.Client):
             now = datetime.datetime.now()
 
             # If time is between 23-07 -> mute periodic updates
-            if 7 <= now.hour <= 23:
+            if 7 <= now.hour < 23:
                 embed_msg = discord.Embed(
                     title="Status update!",
                     description=self.get_market(),
@@ -138,7 +138,7 @@ class DiscordBot(discord.Client):
                 # Sleep for 10min
                 await sleep(600)
 
-            # Sleep longer when it is quiet times
+            # Sleep longer when it is hush hush times
             else:
 
                 # Sleep for 1 hour
