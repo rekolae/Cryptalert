@@ -1,7 +1,7 @@
 """
 Handles reading all possible configurations from files and commandline and setting up logging
 
-Emil Rekola <emil.rekola@hotmail.com>, 2021
+Emil Rekola <emil.rekola@hotmail.com>
 """
 
 # STD imports
@@ -22,9 +22,10 @@ class Config:
         self._config_file: Path = Path(__file__).parent.parent / "config.ini"
         self._verbosity: str = ""
         self._supported_currencies: List = ["btc", "eth", "ltc", "xrp", "xlm"]
+        self._logger = logging.getLogger("Config")
 
         self._arg_parser = ArgParser(
-            prog="cryptalert",
+            prog="Cryptalert",
             description="Watch cryptocurrency movements and alert the user based on them.",
             formatter_class=ArgumentDefaultsRawHelpFormatter,
             default_config_files=[str(self._config_file)]
@@ -42,69 +43,66 @@ class Config:
         """
 
         self._arg_parser.add_argument(
-            "-c",
-            "--config",
+            "-c", "--config",
             help="Config file path",
             type=Path,
             is_config_file=True
         )
 
         self._arg_parser.add_argument(
-            "-v",
-            "--verbosity",
+            "-v", "--verbosity",
             help="Application verbosity",
+            type=str.upper,
             choices=["ERROR", "INFO", "DEBUG"],
-            default="INFO",
-            type=str.upper
+            default="INFO"
         )
 
         self._arg_parser.add_argument(
-            "--currencies",
+            "-x", "--currencies",
             help="List of watched currencies",
+            type=str.lower,
             choices=self._supported_currencies,
             nargs='+',
-            default=self._supported_currencies,
-            type=str.lower
+            default=self._supported_currencies
         )
 
         self._arg_parser.add_argument(
-            "-p",
-            "--ping-interval",
+            "-p", "--ping-interval",
             help="How often to ping for data",
-            default=10,
-            type=int
+            type=int,
+            default=5
         )
 
         self._arg_parser.add_argument(
-            "-a",
-            "--api-address",
+            "-a", "--api-address",
             help="Address of the coinmotion API for fetching rates",
             type=str
         )
 
         self._arg_parser.add_argument(
-            "-e",
-            "--enable-discord-bot",
-            help="Enable discord bot",
+            "-d", "--enable-discord-bot",
+            help="Enable discord bot for notifications",
             action="store_true"
         )
 
         self._arg_parser.add_argument(
-            "-t",
-            "--bot-token",
+            "-b", "--bot-token",
             help="Discord bot token, must be present if -e/--enable-bot is used",
             type=str,
-            env_var="CRYPTALERT_DISCORD_TOKEN",
-            required=False
+            env_var="CRYPTALERT_DISCORD_TOKEN"
         )
 
         self._arg_parser.add_argument(
-            "-i",
-            "--info-channel-id",
+            "-i", "--info-channel-id",
             help="Main channel ID, used for notifications when bot comes online or going offline",
             type=int,
-            env_var="CRYPTALERT_DISCORD_MAIN_CHANNEL_ID",
-            required=False,
+            env_var="CRYPTALERT_DISCORD_MAIN_CHANNEL_ID"
+        )
+
+        self._arg_parser.add_argument(
+            "-t", "--enable-tui",
+            help="Enable the text ui",
+            action="store_true"
         )
 
     def get_args(self) -> Namespace:
@@ -129,17 +127,43 @@ class Config:
 
     def _config_logging(self):
         """
-        Setups logging with default/given verbosity
+        Setups logging with default/given verbosity and log file
         """
 
         # Set logging verbosity based on user configuration
         logging_level = getattr(logging, self._config.verbosity)
 
-        # Configure logger
-        logging.basicConfig(level=logging_level)
+        # Hide messages made to the root logger
+        root_logger = logging.getLogger()
+        root_logger.addHandler(logging.NullHandler())
 
-        logging.info("Logging has been set to %s", self._config.verbosity)
-        logging.debug(self._arg_parser.format_values())
+        # Configure logger, use a log file when TUI is enabled
+        if self._config.enable_tui:
+            handler = logging.FileHandler(filename='cryptalert.log', encoding='utf-8', mode='w')
 
+        else:
+            handler = logging.StreamHandler()
 
-config = Config()
+        # Set format and level
+        handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s'))
+        handler.setLevel(logging_level)
+
+        # Modules that are going to be used
+        modules = [
+            "discord",
+            "discord.bot"
+            "Config",
+            "TUI",
+            "ApiAccessor",
+            "Cryptalert"
+        ]
+
+        # Set handler for the modules
+        for module in modules:
+            logger = logging.getLogger(module)
+            logger.handlers.clear()
+            logger.setLevel(logging_level)
+            logger.addHandler(handler)
+
+        self._logger.info("Logging level has been set to '%s'", self._config.verbosity)
+        self._logger.debug(self._arg_parser.format_values())
