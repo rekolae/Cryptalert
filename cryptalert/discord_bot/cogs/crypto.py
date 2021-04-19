@@ -22,6 +22,7 @@ class Crypto(BotMixin, commands.Cog):
     Bot actions
     """
 
+    # Used for checking if market is going up or down
     prev_total_change: float = None
 
     @commands.command()
@@ -76,39 +77,55 @@ class Crypto(BotMixin, commands.Cog):
         await self.bot.wait_until_ready()
 
     def get_market_status(self) -> str:
+        """
+        Check if market is going up or down and create a status message based on it
+
+        :return: Market status as string
+        """
+
         status = self.bot.api_accessor.api_data["market"]
         change = round(status['changePercent'], 3)
 
         msg_start = "Current market is"
         msg_end = "Current change is"
 
+        # Market in total is positive
         if status["sign"]:
             same_or_no_prev_data = f"{msg_start} positive!\n{msg_end} {change}%!"
 
+            # No previous rates recorded
             if self.prev_total_change is None:
                 msg = same_or_no_prev_data
 
+            # Rates are going down
             elif change < self.prev_total_change:
                 msg = f"{msg_start} positive, but dropping!\n{msg_end} {change}%!"
 
+            # Rates are going up
             elif change > self.prev_total_change:
                 msg = f"{msg_start} positive and rising!\n{msg_end} {change}%!"
 
+            # Rates are the same as previously so practically no change
             else:
                 msg = same_or_no_prev_data
 
+        # Market is negative
         else:
             same_or_no_prev_data = f"{msg_start} negative!\n{msg_end} {change}%!"
 
+            # No previous rates recorded
             if self.prev_total_change is None:
                 msg = same_or_no_prev_data
 
+            # Rates are going down
             elif change < self.prev_total_change:
                 msg = f"{msg_start} negative and dropping!\n{msg_end} {change}%!"
 
+            # Rates are going up
             elif change > self.prev_total_change:
                 msg = f"{msg_start} negative, but rising!\n{msg_end} {change}%!"
 
+            # Rates are the same as previously so practically no change
             else:
                 msg = same_or_no_prev_data
 
@@ -117,12 +134,20 @@ class Crypto(BotMixin, commands.Cog):
         return msg
 
     def get_update_embed(self, title="Status update!") -> discord.Embed:
+        """
+        Create a Discord Embed message and return it with added content
+
+        :param title: Title of the Embed message, default: 'Status update!'
+        :return: Discord Embed message
+        """
+
         embed_msg = discord.Embed(
             title=title,
             description=self.get_market_status(),
             color=discord.Color.magenta()
         )
 
+        # Add buy, sell and change percent fields to the Embed message
         for currency in self.bot.api_accessor.api_data:
             if currency != "market":
                 for op in ("buy", "sell", "changePercent"):
