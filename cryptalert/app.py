@@ -18,7 +18,7 @@ from configargparse import Namespace
 from cryptalert.exceptions import ApiAddressException, UnsupportedOperationModeException
 from cryptalert.config import Config
 from cryptalert.data_fetcher.api_accessor import ApiAccessor
-from cryptalert.discord_bot.bot import DiscordBot
+from cryptalert.discord_bot.bot import CryptalertBot
 from cryptalert.text_ui.tui import TUI
 
 
@@ -55,12 +55,12 @@ class Application:
 
         if self.start_bot and self.args.enable_tui:
             self._logger.info("Starting both Discord bot and TUI")
-            self.bot = DiscordBot(self.args.info_channel_id, self.api_accessor)
+            self.bot = CryptalertBot(self.args, self.api_accessor)
             self.loop = asyncio.get_event_loop()
             self._start_tui_and_bot()
 
         elif self.start_bot:
-            self.bot = DiscordBot(self.args.info_channel_id, self.api_accessor)
+            self.bot = CryptalertBot(self.args, self.api_accessor)
             self._start_bot_only()
 
         elif self.args.enable_tui:

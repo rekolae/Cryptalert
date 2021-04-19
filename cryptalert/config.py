@@ -105,6 +105,20 @@ class Config:
             action="store_true"
         )
 
+        self._arg_parser.add_argument(
+            "--prefix",
+            help="Command prefix e.g. '!someCommand'",
+            type=str,
+            default="!"
+        )
+
+        self._arg_parser.add_argument(
+            "-u", "--update-interval",
+            help="Time interval in seconds to give updates in discord",
+            type=int,
+            default=600
+        )
+
     def get_args(self) -> Namespace:
         """
         Return the previously parsed args

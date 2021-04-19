@@ -6,140 +6,85 @@ Emil Rekola <emil.rekola@hotmail.com>
 
 # STD imports
 import logging
-import json
 import datetime
-from typing import Dict
-from asyncio import sleep
 
 # 3rd-party imports
-import discord
+from configargparse import Namespace
+from discord.ext import commands
+from discord.ext.commands import ExtensionNotFound, ExtensionFailed, NoEntryPointError
 
 # Local imports
 from cryptalert.data_fetcher.api_accessor import ApiAccessor
 
 
-class DiscordBot(discord.Client):
+class CryptalertBot(commands.Bot):
     """
     Class with functionality and actions of the discord bot
     """
 
-    def __init__(self, channel_id, api_accessor: ApiAccessor):
-        super().__init__()
-        self._main_channel_id: int = channel_id
+    extensions = [
+        "crypto",
+        "utils"
+    ]
+
+    def __init__(self, args: Namespace, api_accessor: ApiAccessor):
+        super().__init__(command_prefix=args.prefix)
+        self._main_channel_id: int = args.info_channel_id
+        self.main_channel = None
         self.bot_name: str = self.user
         self.api_accessor: ApiAccessor = api_accessor
-        self.rates: Dict = {}
+        self.update_interval: int = args.update_interval
         self._logger = logging.getLogger("discord.bot")
+        self.startup_time: datetime = datetime.datetime.now()
 
     async def on_ready(self):
         """
         Executed when the bot has been initialized and connection has been made to discord
         """
 
-        # Remove the "#xxxx" appendix from the bot username
-        self.bot_name = str(self.user).split("#")[0]
-        self._logger.info("%s is online!", self.bot_name)
+        # Try to load extension, exit it there is a problem
+        try:
+            self.load_extensions()
 
-        # If info channel was defined
-        if self._main_channel_id is not None:
-            self._logger.debug("Sending bot login message")
-            await self.send_message(self.get_channel(self._main_channel_id), f"{self.bot_name} is online!")
-
-            # Add task that runs in the background every 10min
-            self.loop.create_task(self.periodic_update())
-
-    async def on_message(self, message):
-        """
-        When message is sent to any of the channels, check the message and respond appropriately
-
-        :param message: Message that was recieved from the discord server
-        """
-
-        # Ignore bot's own messages
-        if message.author != self.user:
-            self._logger.info("Message from %s at %s: %s", message.author, message.channel, message.content)
-
-            # Play some Ping Pong with another user
-            if message.content.lower() == "ping":
-                await self.send_message(message.channel, "Pong")
-
-            elif message.content.lower() == "!rates":
-                await self.send_message(message.channel, f"Current rates:\n{self.get_data()}")
-
-            elif message.content.lower() == "!market":
-                await self.send_message(message.channel, self.get_market())
-
-    async def send_message(self, channel, message):
-        """
-        Send given message to the given channel
-
-        :param channel: Target channel for the message
-        :param message: Message to be sent to the channel
-        """
-
-        self._logger.debug("Sending message to '%s'", channel)
-        await channel.send(message)
-
-    def get_data(self) -> str:
-        """
-        Fetch latest data from data fetcher and format it for sending
-
-        :return: Formatted string with market data
-        """
-
-        return json.dumps(self.api_accessor.api_data, indent=4, ensure_ascii=False)
-
-    def get_market(self) -> str:
-        """
-        Get current market trend and format it for sending
-
-        :return: String with current market status
-        """
-
-        status = self.api_accessor.api_data["market"]
-
-        if status["sign"]:
-            msg = f"Current market is rising!\nCurrent change is +{status['changePercent']}%!"
+        except (ExtensionNotFound, ExtensionFailed, NoEntryPointError):
+            self._logger.exception("Extension load error, exiting!")
+            await self.close(True)
+            raise
 
         else:
-            msg = f"Current market is dropping!\nCurrent change is -{status['changePercent']}%!"
+            # Remove the "#xxxx" appendix from the bot username
+            self.bot_name = str(self.user).split("#")[0]
+            self._logger.info("%s is online!", self.bot_name)
 
-        return msg
+            # If info channel was defined
+            if self._main_channel_id is not None:
+                self.main_channel = self.get_channel(self._main_channel_id)
+                self._logger.debug("Sending login message")
+                await self.main_channel.send(f"{self.bot_name} is online!")
 
-    async def periodic_update(self):
+    def load_extensions(self) -> None:
         """
-        Run task every 10min during daytime (7-23) that gives updates on the crypto currencies
+        Try to load known extensions
         """
 
-        while True:
+        for extension in self.extensions:
+            self.load_extension(f"cryptalert.discord_bot.cogs.{extension}")
 
-            # Get current time
-            now = datetime.datetime.now()
+    async def close(self, error=False):
+        """
+        Overwrite close class method that is called when the Discord client is shutting down
 
-            # If time is between 23-07 -> mute periodic updates
-            if 7 <= now.hour < 23:
-                embed_msg = discord.Embed(
-                    title="Status update!",
-                    description=self.get_market(),
-                    color=discord.Color.magenta()
-                )
+        :param error: True if there was an error and no logout message is needed
+        """
 
-                for currency in self.api_accessor.api_data:
-                    if currency != "market":
-                        for op in ("buy", "sell", "changePercent"):
-                            embed_msg.add_field(
-                                name=f"{currency} {op}",
-                                value=self.api_accessor.api_data[currency][op],
-                                inline=True
-                            )
+        # Send shutdown message if there was no error
+        if not error:
 
-                await self.get_channel(self._main_channel_id).send(embed=embed_msg)
+            self._logger.info("Shutting down")
 
-                # Sleep for 10min
-                await sleep(600)
+            if self._main_channel_id is not None:
+                self._logger.info("Sending logout message")
+                await self.main_channel.send(f"{self.bot_name} is going offline!")
 
-            # Sleep longer when it is hush hush times
-            else:
-
-                # Sleep for 1 hour
-                await sleep(3600)
+        # Execute the original "close" function
+        await super().close()
