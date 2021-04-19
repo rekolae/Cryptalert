@@ -1,9 +1,10 @@
 """
-Module defining mixin class
+Module defining mixin class for use with Cogs
 
 Emil Rekola <emil.rekola@hotmail.com>
 """
 
+# Local imports
 from cryptalert.discord_bot.bot import CryptalertBot
 
 
