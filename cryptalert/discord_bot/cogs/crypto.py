@@ -81,7 +81,7 @@ class Crypto(BotMixin, commands.Cog):
         """
         self.bot.logger.info("Waiting for bot to be ready before starting task")
         await self.bot.wait_until_ready()
-        self.bot.logger.error("Bot ready -> starting task")
+        self.bot.logger.info("Bot ready -> starting task")
 
     def get_market_status(self) -> str:
         """
