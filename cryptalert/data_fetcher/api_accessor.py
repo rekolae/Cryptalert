@@ -14,9 +14,6 @@ from threading import Event
 # 3rd-party imports
 from requests import get
 
-# Local imports
-from cryptalert.exceptions import ApiAddressException
-
 
 class ApiAccessor:
     """
@@ -44,9 +41,8 @@ class ApiAccessor:
         try:
             res = response.json()
 
-        except json.JSONDecodeError as json_error:
-            self._logger.critical("No suitable response from API address '%s'", self.api_address)
-            raise ApiAddressException(f"No suitable response from API address '{self.api_address}'") from json_error
+        except json.JSONDecodeError:
+            self._logger.error("No suitable response from API address '%s'", self.api_address)
 
         else:
             self.api_data = self._parse_json(res)
