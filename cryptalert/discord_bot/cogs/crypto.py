@@ -21,9 +21,15 @@ class Crypto(BotMixin, commands.Cog):
     """
     Bot actions
     """
+    
+    def __init__(self, bot):
+        super().__init__(bot)
 
-    # Used for checking if market is going up or down
-    prev_total_change: float = None
+        # Used for checking if market is going up or down
+        self.prev_total_change = None
+
+        # Start task on init
+        self.periodic_update.start()
 
     @commands.command()
     async def rates(self, ctx):
@@ -49,7 +55,7 @@ class Crypto(BotMixin, commands.Cog):
 
         await ctx.send(embed=self.get_update_embed("Current market status!"))
 
-    @tasks.loop(minutes=10)
+    @tasks.loop(minutes=10.0)
     async def periodic_update(self):
         """
         Run task every 10min during daytime (7-23) that gives updates on the crypto currencies
@@ -73,8 +79,9 @@ class Crypto(BotMixin, commands.Cog):
         """
         Wait until bot is ready to start the looping task
         """
-
+        self.bot.logger.info("Waiting for bot to be ready before starting task")
         await self.bot.wait_until_ready()
+        self.bot.logger.error("Bot ready -> starting task")
 
     def get_market_status(self) -> str:
         """
