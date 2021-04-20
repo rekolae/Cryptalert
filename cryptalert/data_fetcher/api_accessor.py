@@ -45,7 +45,10 @@ class ApiAccessor:
             self._logger.error("No suitable response from API address '%s'", self.api_address)
 
         else:
-            self.api_data = self._parse_json(res)
+
+            # Ignore empty data
+            if data := self._parse_json(res):
+                self.api_data = data
 
     def _parse_json(self, response: Dict) -> Dict:
         """
@@ -62,24 +65,30 @@ class ApiAccessor:
 
         parsed_data = {}
 
-        for currency in filtered_currencies:
-            currency_data = response["payload"][currency]
+        try:
+            for currency in filtered_currencies:
+                currency_data = response["payload"][currency]
 
-            # Buy/Sell must be inverted to get the prespective of the user
-            parsed_data[currency_data["currencyCode"]] = {
-                "sell": currency_data["buy"],
-                "buy": currency_data["sell"],
-                "changePercent": currency_data["fchangep"],
-                "high": currency_data["fhigh"]
+                # Buy/Sell must be inverted to get the prespective of the user
+                parsed_data[currency_data["currencyCode"]] = {
+                    "sell": currency_data["buy"],
+                    "buy": currency_data["sell"],
+                    "changePercent": currency_data["fchangep"],
+                    "high": currency_data["fhigh"]
+                }
+
+            # Total market trend
+            parsed_data["market"] = {
+                "changePercent": response["payload"]["market"]["changeAmount"],
+                "sign": response["payload"]["market"]["changeSign"]
             }
 
-        # Total market trend
-        parsed_data["market"] = {
-            "changePercent": response["payload"]["market"]["changeAmount"],
-            "sign": response["payload"]["market"]["changeSign"]
-        }
+        # If invalid Dict key is somehow used -> return empty Dict
+        except KeyError:
+            return {}
 
-        return parsed_data
+        else:
+            return parsed_data
 
     def _filter_keys(self, keys) -> List:
         """
@@ -114,8 +123,10 @@ class ApiAccessor:
 
         self._logger.info("Starting data fetching loop")
 
-        # Set flag after first batch of data is ready
-        self.fetch_data()
+        # Set flag after first batch of data is ready, loop until data could be fetched succesfully
+        while not self.api_data:
+            self.fetch_data()
+
         self.data_ready.set()
 
         # Fetch data and sleep
