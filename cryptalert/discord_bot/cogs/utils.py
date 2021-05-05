@@ -53,6 +53,14 @@ class Utilities(BotMixin, commands.Cog):
         uptime = f"Bot uptime: {time_delta.days} days {hours} hours {mins} minutes {secs} seconds"
         await ctx.send(uptime)
 
+    @commands.command()
+    async def lastFetch(self, ctx):
+        """
+        Display last time the ApiAccessor fetched data
+        """
+
+        await ctx.send(f"Last succesful fetch: {self.bot.api_accessor.last_succcesful_fetch}")
+
 
 def setup(bot):
     """

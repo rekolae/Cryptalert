@@ -10,9 +10,10 @@ import logging
 from time import sleep
 from typing import List, Dict
 from threading import Event
+from datetime import datetime
 
 # 3rd-party imports
-from requests import get
+from requests import get, ConnectionError
 
 
 class ApiAccessor:
@@ -27,6 +28,7 @@ class ApiAccessor:
         self.ping_interval: int = args.ping_interval
         self.currency_keys: List = [f"{currency}eur" for currency in args.currencies]
         self._stop_flag: Event = stop_flag
+        self.last_succcesful_fetch = None
         self._logger = logging.getLogger("ApiAccessor")
 
     def fetch_data(self) -> None:
@@ -35,20 +37,23 @@ class ApiAccessor:
         """
 
         self._logger.debug("Fetching data")
-        response = get(self.api_address)
 
         # Try to fetch data
         try:
+            response = get(self.api_address)
             res = response.json()
 
         except json.JSONDecodeError:
             self._logger.error("No suitable response from API address '%s'", self.api_address)
 
-        else:
+        except ConnectionError:
+            self._logger.error("Connection error while trying to fetch data")
 
+        else:
             # Ignore empty data
             if data := self._parse_json(res):
                 self.api_data = data
+                self.last_succcesful_fetch = datetime.now().time()
 
     def _parse_json(self, response: Dict) -> Dict:
         """
