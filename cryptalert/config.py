@@ -21,7 +21,7 @@ class Config:
     def __init__(self):
         self._config_file: Path = Path(__file__).parent.parent / "config.ini"
         self._verbosity: str = ""
-        self._supported_currencies: List = ["btc", "eth", "ltc", "xrp", "xlm"]
+        self._supported_currencies: List = ["btc", "eth", "ltc", "xrp", "xlm", "aave", "link", "usdc", "uni"]
         self._logger = logging.getLogger("Config")
 
         self._arg_parser = ArgParser(
