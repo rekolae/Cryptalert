@@ -154,15 +154,17 @@ class Crypto(BotMixin, commands.Cog):
             color=discord.Color.magenta()
         )
 
+        currencies = [curr for curr in self.bot.api_accessor.api_data if curr != "market"]
+
         # Add buy, sell and change percent fields to the Embed message
-        for currency in self.bot.api_accessor.api_data:
-            if currency != "market":
-                for op in ("buy", "sell", "changePercent"):
-                    embed_msg.add_field(
-                        name=f"{currency} {op}",
-                        value=self.bot.api_accessor.api_data[currency][op],
-                        inline=True
-                    )
+        for currency in currencies:
+            data = self.bot.api_accessor.api_data[currency]
+            vals = f"Buy: {data['buy']}  Sell: {data['sell']}  %: {data['changePercent']}"
+            embed_msg.add_field(
+                name=currency,
+                value=vals,
+                inline=False
+            )
 
         return embed_msg
 
