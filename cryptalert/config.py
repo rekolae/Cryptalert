@@ -172,5 +172,7 @@ class Config:
             logger.setLevel(logging_level)
             logger.addHandler(handler)
 
-        self._logger.info("Logging level has been set to '%s'", self._config.verbosity)
-        self._logger.debug(self._arg_parser.format_values())
+        self._logger.error("Logging level has been set to '%s'", self._config.verbosity)
+
+        if self._config.verbosity == "DEBUG":
+            print(self._arg_parser.format_values())
