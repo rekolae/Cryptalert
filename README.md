@@ -1,4 +1,4 @@
-# Cryptalert
+# Cryptalert V1.0.0
 
 Python application that fetches cryptocurrency data and notifies the user through discord. The application operation is
 configurable: TUI (Text UI) and Discord bot can both be enabled at the same time, or one of the two can be turned off.
