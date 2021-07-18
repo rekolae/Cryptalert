@@ -7,6 +7,7 @@ Emil Rekola <emil.rekola@hotmail.com>
 # STD imports
 import logging
 import datetime
+from typing import List
 
 # 3rd-party imports
 from configargparse import Namespace
@@ -31,7 +32,11 @@ class CryptalertBot(commands.Bot):
         super().__init__(command_prefix=args.prefix)
 
         self._main_channel_id: int = args.info_channel_id
+        self._notify_channel_id: int = args.notify_channel_id
+        self.short_threshold: float = args.short_threshold
+        self.long_threshold: float = args.long_threshold
         self.main_channel = None
+        self.notify_channel = None
         self.bot_name: str = self.user
         self.api_accessor: ApiAccessor = api_accessor
         self.logger = logging.getLogger("discord.bot")
@@ -56,11 +61,12 @@ class CryptalertBot(commands.Bot):
             self.bot_name = str(self.user).split("#")[0]
             self.logger.info("%s is online!", self.bot_name)
 
-            # If info channel was defined
-            if self._main_channel_id is not None:
-                self.main_channel = self.get_channel(self._main_channel_id)
-                self.logger.debug("Sending login message")
-                await self.main_channel.send(f"{self.bot_name} is online!")
+            # Get channels from IDs
+            self.notify_channel = self.get_channel(self._notify_channel_id)
+            self.main_channel = self.get_channel(self._main_channel_id)
+
+            self.logger.debug("Sending login message")
+            await self.main_channel.send(f"{self.bot_name} is online!")
 
     def load_extensions(self) -> None:
         """

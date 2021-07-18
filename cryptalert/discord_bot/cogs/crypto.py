@@ -6,8 +6,9 @@ Emil Rekola <emil.rekola@hotmail.com>
 
 # STD imports
 import json
-import datetime
+from datetime import datetime
 from asyncio import sleep
+from typing import Tuple
 
 # 3rd-party imports
 import discord
@@ -17,9 +18,37 @@ from discord.ext import commands, tasks
 from cryptalert.discord_bot.cogs.bot_mixin import BotMixin
 
 
+def compare_vals(new: float, old: float, threshold: float) -> Tuple[bool, str]:
+    """
+    Calculate percentage change from given values
+
+    :param new: The newer value used for comparison
+    :param old: The older value used for comparison
+    :param threshold: Threshold percentage value for when to report the change
+
+    :return: Tuple containing bool and the change percent
+    """
+
+    negative_threshold = threshold * -1
+
+    # Calculate change percent
+    change = ((new - old) / old) * 100
+
+    if change >= threshold:
+        result = (True, f"Value raised by {round(change, 3)}%")
+
+    elif change <= negative_threshold:
+        result = (True, f"Value dropped by {round(change, 3)}%")
+
+    else:
+        result = (False, round(change, 3))
+
+    return result
+
+
 class Crypto(BotMixin, commands.Cog):
     """
-    Bot actions
+    Bot crypto related actions
     """
     
     def __init__(self, bot):
@@ -28,8 +57,9 @@ class Crypto(BotMixin, commands.Cog):
         # Used for checking if market is going up or down
         self.prev_total_change = None
 
-        # Start task on init
+        # Start tasks on init
         self.periodic_update.start()
+        self.compare_short_interval.start()
 
     @commands.command()
     async def rates(self, ctx):
@@ -62,7 +92,7 @@ class Crypto(BotMixin, commands.Cog):
         """
 
         # Get current time
-        now = datetime.datetime.now()
+        now = datetime.now()
 
         # If time is between 23-07 -> mute periodic updates
         if 7 <= now.hour < 23:
@@ -77,11 +107,100 @@ class Crypto(BotMixin, commands.Cog):
     @periodic_update.before_loop
     async def before_periodic_update(self):
         """
-        Wait until bot is ready to start the looping task
+        Wait until bot is ready to start the periodic update task
         """
-        self.bot.logger.info("Waiting for bot to be ready before starting task")
+
+        self.bot.logger.info("Waiting for bot to be ready before starting periodic_update task")
         await self.bot.wait_until_ready()
-        self.bot.logger.info("Bot ready -> starting task")
+        self.bot.logger.info("Bot ready -> starting periodic_update task")
+
+    @tasks.loop(seconds=15.0)
+    async def compare_short_interval(self):
+        """
+        Check coin values every 15 seconds and send notifications if thresholds were passed
+        """
+
+        # Get current time
+        now = datetime.now()
+
+        # If time is between 23-07 -> mute rate comparison
+        if 7 <= now.hour < 23:
+
+            historical_data = self.bot.api_accessor.coin_histories
+
+            embed_msg = discord.Embed(
+                title="Short term update!",
+                color=discord.Color.gold()
+            )
+
+            send_msg = False
+
+            for coin, coin_data in historical_data.items():
+                if len(coin_data) != 4:
+                    self.bot.logger.info("Historical data not ready")
+
+                else:
+                    comp_short = compare_vals(coin_data[3], coin_data[2], self.bot.short_threshold)
+                    comp_long = compare_vals(coin_data[3], coin_data[0], self.bot.long_threshold)
+
+                    if comp_short[0] and comp_long[0]:
+
+                        # 15s change threshold was passed
+                        embed_msg.add_field(
+                            name=coin,
+                            value=f"{comp_short[1]} in the past 15 sec!",
+                            inline=False
+                        )
+
+                        # 1min change threshold was passed
+                        embed_msg.add_field(
+                            name=coin,
+                            value=f"{comp_long[1]} in the past minute!",
+                            inline=False
+                        )
+
+                        send_msg = True
+
+                    elif comp_short[0]:
+
+                        # 15s change threshold was passed
+                        embed_msg.add_field(
+                            name=coin,
+                            value=f"{comp_short[1]} in the past 15 sec!",
+                            inline=False
+                        )
+
+                        send_msg = True
+
+                    elif comp_long[0]:
+
+                        # 1min change threshold was passed
+                        embed_msg.add_field(
+                            name=coin,
+                            value=f"{comp_long[1]} in the past minute!",
+                            inline=False
+                        )
+
+                        send_msg = True
+
+            if send_msg:
+                await self.bot.notify_channel.send(embed=embed_msg)
+
+        # Sleep longer when it is hush hush times
+        else:
+
+            # Sleep for 1 hour
+            await sleep(3600)
+
+    @compare_short_interval.before_loop
+    async def before_short_interval_compare(self):
+        """
+        Wait until bot is ready to start the value comparing task
+        """
+
+        self.bot.logger.info("Waiting for bot to be ready before starting compare_short_interval task")
+        await self.bot.wait_until_ready()
+        self.bot.logger.info("Bot ready -> starting compare_short_interval task")
 
     def get_market_status(self) -> str:
         """
