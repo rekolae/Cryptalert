@@ -139,15 +139,20 @@ class Application:
             raise UnsupportedOperationModeException("Discord bot and TUI aren't enabled, atleast one must be enabled")
 
         if self.args.enable_discord_bot:
-            if self.args.bot_token is not None:
+            if self.args.bot_token is not None and self.args.info_channel_id is not None:
                 self.start_bot = True
+
+                # If notification channel was not specified -> use main channel
+                if self.args.notify_channel_id is None:
+                    self.args.notify_channel_id = self.args.info_channel_id
 
             else:
                 if not self.args.enable_tui:
                     self._logger.critical("Discord bot token not given and TUI not enabled")
                     raise UnsupportedOperationModeException("Discord bot token not given and TUI not enabled")
 
-                self._logger.error("Discord bot token is None, bot will not be enabled")
+                else:
+                    self._logger.error("Discord bot token or Main channel ID is None, bot will not be enabled")
 
 
 # Start application if file is run as main
