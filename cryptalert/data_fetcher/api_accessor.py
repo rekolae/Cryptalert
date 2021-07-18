@@ -7,10 +7,11 @@ Emil Rekola <emil.rekola@hotmail.com>
 # STD imports
 import json
 import logging
-from time import sleep
-from typing import List, Dict
-from threading import Event
+from collections import deque
 from datetime import datetime
+from threading import Event
+from time import sleep
+from typing import List, Dict, Deque
 
 # 3rd-party imports
 from requests import get, ConnectionError
@@ -23,6 +24,7 @@ class ApiAccessor:
 
     def __init__(self, args, stop_flag):
         self.api_data: Dict = {}
+        self.coin_histories: Dict[str, Deque[float]] = {}
         self.data_ready: Event = Event()
         self.api_address: str = args.api_address
         self.ping_interval: int = args.ping_interval
@@ -30,6 +32,19 @@ class ApiAccessor:
         self._stop_flag: Event = stop_flag
         self.last_succcesful_fetch = None
         self._logger = logging.getLogger("ApiAccessor")
+
+        self._init_coin_histories(args.currencies)
+
+    def _init_coin_histories(self, currencies: List) -> None:
+        """
+        Initialize the the data structure that holds historical data of the value of the coin
+
+        :param currencies:  List of configured currencies
+        """
+
+        # Create a deque object for every coin with space for the past 4 values
+        for currency in currencies:
+            self.coin_histories[currency] = deque(maxlen=4)
 
     def fetch_data(self) -> None:
         """
@@ -82,6 +97,9 @@ class ApiAccessor:
                     "high": currency_data["fhigh"]
                 }
 
+                # Add fetched buy price to the historical data structure
+                self.coin_histories[currency_data["currencyCode"].lower()].append(float(currency_data["sell"]))
+
             # Total market trend
             parsed_data["market"] = {
                 "changePercent": response["payload"]["market"]["changeAmount"],
@@ -129,8 +147,10 @@ class ApiAccessor:
         self._logger.info("Starting data fetching loop")
 
         # Set flag after first batch of data is ready, loop until data could be fetched succesfully
+        # but sleep for 2 secs between attempts to reduce GET request spamming
         while not self.api_data:
             self.fetch_data()
+            sleep(2)
 
         self.data_ready.set()
 
