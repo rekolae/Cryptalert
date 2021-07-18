@@ -100,6 +100,27 @@ class Config:
         )
 
         self._arg_parser.add_argument(
+            "-n", "--notify-channel-id",
+            help="ID for the channel that is used for notifications regarding fast coin movements",
+            type=int,
+            env_var="CRYPTALERT_DISCORD_NOTIFY_CHANNEL_ID"
+        )
+
+        self._arg_parser.add_argument(
+            "-s", "--short-threshold",
+            help="Short term percentage threshold for notifications",
+            type=float,
+            default=0.5
+        )
+
+        self._arg_parser.add_argument(
+            "-l", "--long-threshold",
+            help="Long term percentage threshold for notifications",
+            type=float,
+            default=1.0
+        )
+
+        self._arg_parser.add_argument(
             "-t", "--enable-tui",
             help="Enable the text ui",
             action="store_true"
