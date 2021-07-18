@@ -7,7 +7,6 @@ Emil Rekola <emil.rekola@hotmail.com>
 # STD imports
 import logging
 import datetime
-from typing import List
 
 # 3rd-party imports
 from configargparse import Namespace
